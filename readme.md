@@ -1,6 +1,6 @@
 # Diff tool for OD inference (DiffOD)
 
-## Streamlit App for compare difference for 2 different Object detection model  
+Streamlit App for compare difference for 2 different Object detection model  
 
 
 ## Docker command reference 
