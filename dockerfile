@@ -14,10 +14,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ./sapp.py /app/sapp.py
-COPY ./requirements.txt /app/requirements.txt
+ADD ./requirements.txt /app
 
-RUN pip3 install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache \
+    pip3 install -r requirements.txt
 
+COPY ./*.py /app/
+COPY ./figure /app/figure
 # following entrypoint may cause single package error. still need to check.
 # 
 #ENTRYPOINT ["streamlit", "run", "sapp.py", "--server.port=8501", "--server.address=0.0.0.0"]
