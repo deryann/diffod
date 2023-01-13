@@ -55,8 +55,4 @@ def get_iou_compare_result(lst_r_1: list, lst_r_2: list):
 
             if r_item_1['link'] != None:
                 r_item_1['link']['b_used'] = 1
-
-    # from pprint import pprint
-
-    # pprint (r1)
     return r1
