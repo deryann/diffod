@@ -1,6 +1,7 @@
 from PIL import Image
 import numpy as np
 import cv2
+import math
 
 
 class ObjectDetector:
@@ -39,18 +40,29 @@ class ObjectDetector:
         raise Exception(f"[WARNING] {__name__} is not implement")
 
     def inference_as_image_by_filepath(self, filename: str):
+        FONT_SCALE = 1.5* 1e-3  # Adjust for larger font size in all images
+        FONT_THICKNESS_SCALE = 1e-3  # Adjust for larger thickness in all images
+        LINE_THICKNESS_SCALE = 1e-2  # Adjust for larger thickness in all images
+        TEXT_Y_OFFSET_SCALE = 1e-2  # Adjust for larger Y-offset of text and bounding box
+
         image = Image.open(filename)
         image = image.convert("RGB")
         image = np.array(image)
+        height, width, _ = image.shape
         pred = self.inference_2_nparray_by_filepath(filename)
         for obj in pred:
             x1, y1, x2, y2, conf, label_idx = obj
             pt1 = (int(x1), int(y1))
             pt2 = (int(x2), int(y2))
             _color = self.color_list[int(label_idx) % len(self.color_list)]
-            cv2.rectangle(image, pt1, pt2, _color, 2)
+            font_thickness = math.ceil(min(width, height) * FONT_THICKNESS_SCALE)
+            line_thickness = math.ceil(min(width, height) * LINE_THICKNESS_SCALE)
+            cv2.rectangle(image, pt1, pt2, _color, line_thickness)
             _text = self.labels[label_idx] + f" {conf:.2f}"
-            cv2.putText(image, _text, pt1, cv2.FONT_HERSHEY_SIMPLEX, 1, _color, 2)
+            cv2.putText(image, _text, (pt1[0], pt1[1] - int(height * TEXT_Y_OFFSET_SCALE)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        min(width, height) * FONT_SCALE,
+                        _color, font_thickness)
 
         # Convert image from numpy array to PIL image
         image = Image.fromarray(np.uint8(image))

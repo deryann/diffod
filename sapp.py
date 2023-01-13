@@ -28,9 +28,9 @@ def function_yolo_v5(image_file):
 
 def main():
 
-    st.set_page_config(page_title="Diff Object Detection App", page_icon="figure/compare.png", layout="wide")
+    st.set_page_config(page_title="Diff Object Detection", page_icon="figure/compare.png", layout="wide")
 
-    st.title("Diff Object Detection App")
+    st.title("Diff Object Detection")
 
     # Create a file uploader widget
     image_file = st.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
