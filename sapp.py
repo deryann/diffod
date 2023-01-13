@@ -7,6 +7,7 @@ import streamlit as st
 from PIL import Image
 
 import numpy as np
+import pandas as pd
 import math
 import cv2
 
@@ -17,11 +18,12 @@ from compare_utility import *
 CONST_MODEL_01 = 'yolov5s'
 CONST_MODEL_02 = 'yolov8s'
 
-d_yolov5 = ObjectDetectorYoloV5({'model_name':CONST_MODEL_01})
-d_yolov8 = ObjectDetectorYoloV8({'model_name':CONST_MODEL_02})
+d_yolov5 = ObjectDetectorYoloV5({'model_name': CONST_MODEL_01})
+d_yolov8 = ObjectDetectorYoloV8({'model_name': CONST_MODEL_02})
 
-def get_image_compare_result (filename:str, lst_base, lst_to, color_same=(0,255,0) , color_diff= (255,0,0)):
-    FONT_SCALE = 1.5* 1e-3  # Adjust for larger font size in all images
+
+def get_image_compare_result(filename: str, lst_base, lst_to, color_same=(0, 255, 0), color_diff=(255, 0, 0)):
+    FONT_SCALE = 1.5 * 1e-3  # Adjust for larger font size in all images
     FONT_THICKNESS_SCALE = 1e-3  # Adjust for larger thickness in all images
     LINE_THICKNESS_SCALE = 1e-2  # Adjust for larger thickness in all images
     TEXT_Y_OFFSET_SCALE = 1e-2  # Adjust for larger Y-offset of text and bounding box
@@ -52,6 +54,24 @@ def get_image_compare_result (filename:str, lst_base, lst_to, color_same=(0,255,
     image = Image.fromarray(np.uint8(image))
     return image
 
+
+def get_df_stat(lst_r_1, lst_r_2):
+    """
+    compare count of the classes
+    """
+    df1 = pd.DataFrame(lst_r_1)
+    df2 = pd.DataFrame(lst_r_2)
+    df1['model'] = CONST_MODEL_01
+    df2['model'] = CONST_MODEL_02
+    df = pd.concat([df1, df2])
+    df_stat = df.groupby(['label', 'model']).agg({'conf': 'count'}).reset_index().pivot(columns='model', index='label', values='conf')
+    df_stat = df_stat.fillna(0)
+    for col in df_stat.columns.values:
+        df_stat[col] = df_stat[col].astype('int')
+
+    return df_stat
+
+
 def main():
 
     st.set_page_config(page_title="Diff Object Detection", page_icon="figure/compare.png", layout="wide")
@@ -66,18 +86,20 @@ def main():
         _temp_name = 'temp.jpg'
         image = Image.open(image_file)
         image.save(_temp_name)
-        
+
         lst_v5_result = d_yolov5.inference_as_json_by_filepath(_temp_name)
         lst_v8_result = d_yolov8.inference_as_json_by_filepath(_temp_name)
-
+        df_stat = get_df_stat(lst_v5_result, lst_v8_result)
         with col1:
-            st.header(f"YOLOV5 - {CONST_MODEL_01}")
+            st.subheader(f"YOLOV5 - {CONST_MODEL_01}")
             image_1 = get_image_compare_result(_temp_name, copy.deepcopy(lst_v5_result), copy.deepcopy(lst_v8_result))
             st.image(image_1, caption='V5 Result.', use_column_width=True)
         with col2:
-            st.header(f"YOLOV8 - {CONST_MODEL_02}")
-            image_2 = get_image_compare_result(_temp_name, lst_v8_result, lst_v5_result, color_diff=(0,0,255))
+            st.subheader(f"YOLOV8 - {CONST_MODEL_02}")
+            image_2 = get_image_compare_result(_temp_name, lst_v8_result, lst_v5_result, color_diff=(0, 0, 255))
             st.image(image_2, caption='V8 Result.', use_column_width=True)
+        st.subheader(f"Labels Count:")
+        st.dataframe(df_stat.style.highlight_max(axis=1))
 
 
 if __name__ == '__main__':
