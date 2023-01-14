@@ -5,64 +5,65 @@ from streamlit import runtime
 
 import streamlit as st
 from PIL import Image
-
-import numpy as np
 import pandas as pd
-import math
-import cv2
 
 from ObjectDetectorYoloV5 import ObjectDetectorYoloV5
 from ObjectDetectorYoloV8 import ObjectDetectorYoloV8
 
 from compare_utility import *
-CONST_MODEL_01 = 'yolov5s'
-CONST_MODEL_02 = 'yolov8s'
-
-d_yolov5 = ObjectDetectorYoloV5({'model_name': CONST_MODEL_01})
-d_yolov8 = ObjectDetectorYoloV8({'model_name': CONST_MODEL_02})
+from image_utility import get_image_compare_result
 
 
-def get_image_compare_result(filename: str, lst_base, lst_to, color_same=(0, 255, 0), color_diff=(255, 0, 0)):
-    FONT_SCALE = 1.5 * 1e-3  # Adjust for larger font size in all images
-    FONT_THICKNESS_SCALE = 1e-3  # Adjust for larger thickness in all images
-    LINE_THICKNESS_SCALE = 1e-2  # Adjust for larger thickness in all images
-    TEXT_Y_OFFSET_SCALE = 1e-2  # Adjust for larger Y-offset of text and bounding box
+LIST_YOLOV5 = ["yolov5n", "yolov5s", "yolov5m", "yolov5l", "yolov5x"]
+LIST_YOLOV8 = ["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x"]
+ALL_MODELS = LIST_YOLOV5 + LIST_YOLOV8
+SET_YOLOV5 = set(LIST_YOLOV5)
+SET_YOLOV8 = set(LIST_YOLOV8)
+idx_model_a = 1
+idx_model_b = 6
 
-    image = Image.open(filename)
-    image = image.convert("RGB")
-    image = np.array(image)
-    height, width, _ = image.shape
-    lst_results = get_iou_compare_result(lst_base, lst_to)
-    for obj in lst_results:
-        x1, y1, x2, y2, conf, label = obj['x1'], obj['y1'], obj['x2'], obj['y2'], obj['conf'], obj['label']
-        pt1 = (int(x1), int(y1))
-        pt2 = (int(x2), int(y2))
-        if obj.get('link', None) is None:
-            _color = color_diff
-        else:
-            _color = color_same
-        font_thickness = math.ceil(min(width, height) * FONT_THICKNESS_SCALE)
-        line_thickness = math.ceil(min(width, height) * LINE_THICKNESS_SCALE)
-        cv2.rectangle(image, pt1, pt2, _color, line_thickness)
-        _text = label + f" {conf:.2f}"
-        cv2.putText(image, _text, (pt1[0], pt1[1] - int(height * TEXT_Y_OFFSET_SCALE)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    min(width, height) * FONT_SCALE,
-                    _color, font_thickness)
+# initialize A B models
+model_a = ObjectDetectorYoloV5({'model_name':  ALL_MODELS[idx_model_a]})
+model_b = ObjectDetectorYoloV8({'model_name':  ALL_MODELS[idx_model_b]})
 
-    # Convert image from numpy array to PIL image
-    image = Image.fromarray(np.uint8(image))
-    return image
+
+def get_od_model(model_name: str):
+    if model_name in SET_YOLOV5:
+        return ObjectDetectorYoloV5({'model_name': model_name})
+    if model_name in SET_YOLOV8:
+        return ObjectDetectorYoloV8({'model_name': model_name})
+
+
+def on_change_model():
+    print(st.session_state['model_a'])
+    print(st.session_state['model_b'])
+    refresh_model(st.session_state['model_a'], st.session_state['model_b'])
+    pass
+
+
+def refresh_model(model_a_name, model_b_name):
+    global model_a, model_b
+    if model_a_name != model_a.model_name:
+        print(f"RENEW MODEL A AS {model_a_name}")
+        model_a.clear_model()
+        model_a = get_od_model(model_a_name)
+
+    if model_b_name != model_b.model_name:
+        print(f"RENEW MODEL B AS {model_b_name}")
+        model_b.clear_model()
+        model_b = get_od_model(model_b_name)
+    pass
 
 
 def get_df_stat(lst_r_1, lst_r_2):
     """
     compare count of the classes
     """
+    global model_a, model_b
     df1 = pd.DataFrame(lst_r_1)
     df2 = pd.DataFrame(lst_r_2)
-    df1['model'] = CONST_MODEL_01
-    df2['model'] = CONST_MODEL_02
+    df1['model'] = model_a.model_name
+    df2['model'] = model_b.model_name
     df = pd.concat([df1, df2])
     df_stat = df.groupby(['label', 'model']).agg({'conf': 'count'}).reset_index().pivot(columns='model', index='label', values='conf')
     df_stat = df_stat.fillna(0)
@@ -73,31 +74,41 @@ def get_df_stat(lst_r_1, lst_r_2):
 
 
 def main():
-
+    global model_b, model_a
     st.set_page_config(page_title="Diff Object Detection", page_icon="figure/compare.png", layout="wide")
 
     st.title("Diff Object Detection")
 
     # Create a file uploader widget
-    image_file = st.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
+    # image_file = st.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
+
+    result_v5 = st.sidebar.selectbox(
+        "Model A", ALL_MODELS, index=idx_model_a, on_change=on_change_model, key='model_a')
+
+    result_v8 = st.sidebar.selectbox(
+        "Model B", ALL_MODELS, index=idx_model_b, on_change=on_change_model, key='model_b')
+
+    image_file = st.sidebar.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
     col1, col2 = st.columns(2)
     if image_file is not None:
         # Open the image file
         _temp_name = 'temp.jpg'
         image = Image.open(image_file)
         image.save(_temp_name)
+        refresh_model(st.session_state['model_a'], st.session_state['model_b'])
 
-        lst_v5_result = d_yolov5.inference_as_json_by_filepath(_temp_name)
-        lst_v8_result = d_yolov8.inference_as_json_by_filepath(_temp_name)
-        df_stat = get_df_stat(lst_v5_result, lst_v8_result)
+        lst_result_a = model_a.inference_as_json_by_filepath(_temp_name)
+        lst_result_b = model_b.inference_as_json_by_filepath(_temp_name)
+        df_stat = get_df_stat(lst_result_a, lst_result_b)
         with col1:
-            st.subheader(f"YOLOV5 - {CONST_MODEL_01}")
-            image_1 = get_image_compare_result(_temp_name, copy.deepcopy(lst_v5_result), copy.deepcopy(lst_v8_result))
+            st.subheader(f"Model A - {model_a.model_name}")
+            image_1 = get_image_compare_result(_temp_name, copy.deepcopy(lst_result_a), copy.deepcopy(lst_result_b))
             st.image(image_1, caption='V5 Result.', use_column_width=True)
         with col2:
-            st.subheader(f"YOLOV8 - {CONST_MODEL_02}")
-            image_2 = get_image_compare_result(_temp_name, lst_v8_result, lst_v5_result, color_diff=(0, 0, 255))
+            st.subheader(f"Model B - {model_b.model_name}")
+            image_2 = get_image_compare_result(_temp_name, lst_result_b, lst_result_a, color_diff=(0, 0, 255))
             st.image(image_2, caption='V8 Result.', use_column_width=True)
+
         st.subheader(f"Labels Count:")
         st.dataframe(df_stat.style.highlight_max(axis=1))
 

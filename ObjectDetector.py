@@ -26,6 +26,7 @@ class ObjectDetector:
         """
         self.model = None
         self.labels = []
+        self.model_name = dic_cfg.get('model_name', 'dummy') 
         self.load_model(dic_cfg)
         pass
 
