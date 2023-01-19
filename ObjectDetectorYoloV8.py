@@ -17,7 +17,6 @@ class ObjectDetectorYoloV8(ObjectDetector):
     """
 
     def load_model(self, dic_cfg={}):
-
         self.model = YOLO(dic_cfg.get('model_name', 'yolov8s') + ".pt")  # load a pretrained model (recommended for training)
         self.labels = self.model.model.names
         pass
@@ -37,5 +36,10 @@ class ObjectDetectorYoloV8(ObjectDetector):
 
     def inference_2_nparray_by_filepath(self, filename: str):
         list_tensor = self.model(filename)
-        pred = list_tensor[0].detach().cpu().numpy()
+
+        if list_tensor is not None:
+            pred = list_tensor[0].boxes.boxes.cpu().numpy()
+        else:
+            pred = np.array([])
+
         return pred

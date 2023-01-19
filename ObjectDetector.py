@@ -75,12 +75,12 @@ class ObjectDetector:
         for obj in pred:
             x1, y1, x2, y2, conf, label_idx = obj
             dic_r = {
-                "x1": x1,
-                "x2": x2,
-                "y1": y1,
-                "y2": y2,
+                "x1": int(x1),
+                "x2": int(x2),
+                "y1": int(y1),
+                "y2": int(y2),
                 "conf": conf,
-                "label": self.labels[label_idx],
+                "label": self.labels[int(label_idx)],
             }
             r.append(dic_r)
         return r

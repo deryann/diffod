@@ -8,23 +8,26 @@ from PIL import Image
 import pandas as pd
 
 from ObjectDetectorYoloV5 import ObjectDetectorYoloV5
+from ObjectDetectorYoloV7 import ObjectDetectorYoloV7
 from ObjectDetectorYoloV8 import ObjectDetectorYoloV8
-
 from compare_utility import *
 from image_utility import get_image_compare_result
 
 
 LIST_YOLOV5 = ["yolov5n", "yolov5s", "yolov5m", "yolov5l", "yolov5x"]
 LIST_YOLOV8 = ["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x"]
-ALL_MODELS = LIST_YOLOV5 + LIST_YOLOV8
+
+LIST_YOLOV7 = ["yolov7-tiny", "yolov7"]
+ALL_MODELS = LIST_YOLOV5 + LIST_YOLOV7 + LIST_YOLOV8
+
 SET_YOLOV5 = set(LIST_YOLOV5)
 SET_YOLOV8 = set(LIST_YOLOV8)
-idx_model_a = 1
-idx_model_b = 6
+SET_YOLOV7 = set(LIST_YOLOV7)
 
-# initialize A B models
-model_a = ObjectDetectorYoloV5({'model_name':  ALL_MODELS[idx_model_a]})
-model_b = ObjectDetectorYoloV8({'model_name':  ALL_MODELS[idx_model_b]})
+# perset the models for 1at launch 
+idx_model_a = ALL_MODELS.index("yolov5s")
+#idx_model_a = ALL_MODELS.index("yolov7-tiny")
+idx_model_b = ALL_MODELS.index("yolov8s")
 
 
 def get_od_model(model_name: str):
@@ -32,7 +35,12 @@ def get_od_model(model_name: str):
         return ObjectDetectorYoloV5({'model_name': model_name})
     if model_name in SET_YOLOV8:
         return ObjectDetectorYoloV8({'model_name': model_name})
+    if model_name in SET_YOLOV7:
+        return ObjectDetectorYoloV7({'model_name': model_name})
 
+# initialize A B models
+model_a = get_od_model(ALL_MODELS[idx_model_a])
+model_b = get_od_model(ALL_MODELS[idx_model_b])
 
 def on_change_model():
     print(st.session_state['model_a'])
@@ -70,6 +78,10 @@ def get_df_stat(lst_r_1, lst_r_2):
     for col in df_stat.columns.values:
         df_stat[col] = df_stat[col].astype('int')
 
+    try:
+        df_stat = df_stat = df_stat[[model_a.model_name, model_b.model_name]]
+    except:
+        pass
     return df_stat
 
 
@@ -89,7 +101,7 @@ def main():
         "Model B", ALL_MODELS, index=idx_model_b, on_change=on_change_model, key='model_b')
 
     image_file = st.sidebar.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     if image_file is not None:
         # Open the image file
         _temp_name = 'temp.jpg'
@@ -100,17 +112,18 @@ def main():
         lst_result_a = model_a.inference_as_json_by_filepath(_temp_name)
         lst_result_b = model_b.inference_as_json_by_filepath(_temp_name)
         df_stat = get_df_stat(lst_result_a, lst_result_b)
+        
         with col1:
             st.subheader(f"Model A - {model_a.model_name}")
             image_1 = get_image_compare_result(_temp_name, copy.deepcopy(lst_result_a), copy.deepcopy(lst_result_b))
-            st.image(image_1, caption='V5 Result.', use_column_width=True)
+            st.image(image_1, caption=f'{model_a.model_name} Result.', use_column_width=True)
         with col2:
             st.subheader(f"Model B - {model_b.model_name}")
             image_2 = get_image_compare_result(_temp_name, lst_result_b, lst_result_a, color_diff=(0, 0, 255))
-            st.image(image_2, caption='V8 Result.', use_column_width=True)
-
-        st.subheader(f"Labels Count:")
-        st.dataframe(df_stat.style.highlight_max(axis=1))
+            st.image(image_2, caption=f'{model_b.model_name} Result.', use_column_width=True)
+        with col3:
+            st.subheader(f"Labels Count:")
+            st.dataframe(df_stat.style.highlight_max(axis=1))
 
 
 if __name__ == '__main__':
