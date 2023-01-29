@@ -19,10 +19,12 @@ ADD ./requirements.txt /app
 RUN --mount=type=cache,target=/root/.cache \
     pip3 install -r requirements.txt
 
-COPY ./*.py /app/
-COPY ./figure /app/figure
+
 # following entrypoint may cause single package error. still need to check.
 # 
 #ENTRYPOINT ["streamlit", "run", "sapp.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
-ENTRYPOINT ["python", "sapp.py"]
+ENTRYPOINT ["python", "sapp.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
+COPY ./*.py /app/
+COPY ./figure /app/figure

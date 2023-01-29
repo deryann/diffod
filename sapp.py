@@ -93,14 +93,14 @@ def main():
 
     # Create a file uploader widget
     # image_file = st.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
-
+    st.sidebar.text("Choose A/B Models:")
     result_v5 = st.sidebar.selectbox(
         "Model A", ALL_MODELS, index=idx_model_a, on_change=on_change_model, key='model_a')
 
     result_v8 = st.sidebar.selectbox(
         "Model B", ALL_MODELS, index=idx_model_b, on_change=on_change_model, key='model_b')
 
-    image_file = st.sidebar.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
+    image_file = st.sidebar.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
     col1, col2, col3 = st.columns(3)
     if image_file is not None:
         # Open the image file
