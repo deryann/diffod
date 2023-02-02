@@ -1,3 +1,6 @@
+"""
+Main UI streamlit app
+"""
 import copy
 import sys
 from streamlit.web import cli as stcli
@@ -24,9 +27,9 @@ SET_YOLOV5 = set(LIST_YOLOV5)
 SET_YOLOV8 = set(LIST_YOLOV8)
 SET_YOLOV7 = set(LIST_YOLOV7)
 
-# perset the models for 1at launch 
+# perset the models for 1at launch
 idx_model_a = ALL_MODELS.index("yolov5s")
-#idx_model_a = ALL_MODELS.index("yolov7-tiny")
+# idx_model_a = ALL_MODELS.index("yolov7-tiny")
 idx_model_b = ALL_MODELS.index("yolov8s")
 
 
@@ -38,9 +41,11 @@ def get_od_model(model_name: str):
     if model_name in SET_YOLOV7:
         return ObjectDetectorYoloV7({'model_name': model_name})
 
+
 # initialize A B models
 model_a = get_od_model(ALL_MODELS[idx_model_a])
 model_b = get_od_model(ALL_MODELS[idx_model_b])
+
 
 def on_change_model():
     print(st.session_state['model_a'])
@@ -70,8 +75,12 @@ def get_df_stat(lst_r_1, lst_r_2):
     global model_a, model_b
     df1 = pd.DataFrame(lst_r_1)
     df2 = pd.DataFrame(lst_r_2)
-    df1['model'] = model_a.model_name
-    df2['model'] = model_b.model_name
+
+    if model_a.model_name == model_b.model_name:
+        df1['model'], df2['model'] = model_a.model_name + '_L', model_b.model_name + '_R'
+    else:
+        df1['model'], df2['model'] = model_a.model_name, model_b.model_name
+
     df = pd.concat([df1, df2])
     df_stat = df.groupby(['label', 'model']).agg({'conf': 'count'}).reset_index().pivot(columns='model', index='label', values='conf')
     df_stat = df_stat.fillna(0)
@@ -93,12 +102,31 @@ def main():
 
     # Create a file uploader widget
     # image_file = st.file_uploader("Choose an image", type=["jpg", "png", "jpeg"])
-    st.sidebar.text("Choose A/B Models:")
-    result_v5 = st.sidebar.selectbox(
+
+    st.sidebar.subheader("Choose A/B Models:")
+    result_model_a = st.sidebar.selectbox(
         "Model A", ALL_MODELS, index=idx_model_a, on_change=on_change_model, key='model_a')
 
-    result_v8 = st.sidebar.selectbox(
-        "Model B", ALL_MODELS, index=idx_model_b, on_change=on_change_model, key='model_b')
+    with st.sidebar.expander("Model A config"):
+        _a_iou_input = st.slider(label='IOU threshold',
+                                 max_value=1.0,
+                                 min_value=0.0,
+                                 value=0.45,
+                                 step=0.05,
+                                 key='model_a_iou')
+        _a_conf_input = st.slider(label='Conf threshold',
+                                        max_value=1.0,
+                                        min_value=0.0,
+                                        value=0.25,
+                                        step=0.05,
+                                        key='model_a_conf')
+        result_model_b = st.sidebar.selectbox(
+            "Model B", ALL_MODELS, index=idx_model_b, on_change=on_change_model, key='model_b')
+
+    with st.sidebar.expander("Model B config"):
+
+        _b_iou_input = st.slider(label='IOU threshold', max_value=1.0, min_value=0.0, value=0.45, step=0.05, key='model_b_iou')
+        _b_conf_input = st.slider(label='Conf threshold', max_value=1.0, min_value=0.0, value=0.25, step=0.05, key='model_b_conf')
 
     image_file = st.sidebar.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
     col1, col2, col3 = st.columns(3)
@@ -109,10 +137,13 @@ def main():
         image.save(_temp_name)
         refresh_model(st.session_state['model_a'], st.session_state['model_b'])
 
-        lst_result_a = model_a.inference_as_json_by_filepath(_temp_name)
-        lst_result_b = model_b.inference_as_json_by_filepath(_temp_name)
+        dic_cfg_a = {"iou_thres": st.session_state['model_a_iou'], "conf_thres": st.session_state['model_a_conf']}
+        dic_cfg_b = {"iou_thres": st.session_state['model_b_iou'], "conf_thres": st.session_state['model_b_conf']}
+
+        lst_result_a = model_a.inference_as_json_by_filepath(_temp_name, dic_cfg=dic_cfg_a)
+        lst_result_b = model_b.inference_as_json_by_filepath(_temp_name, dic_cfg=dic_cfg_b)
         df_stat = get_df_stat(lst_result_a, lst_result_b)
-        
+
         with col1:
             st.subheader(f"Model A - {model_a.model_name}")
             image_1 = get_image_compare_result(_temp_name, copy.deepcopy(lst_result_a), copy.deepcopy(lst_result_b))

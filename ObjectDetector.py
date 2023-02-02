@@ -69,8 +69,8 @@ class ObjectDetector:
         image = Image.fromarray(np.uint8(image))
         return image
 
-    def inference_as_json_by_filepath(self, filename: str):
-        pred = self.inference_2_nparray_by_filepath(filename)
+    def inference_as_json_by_filepath(self, filename: str, dic_cfg = None):
+        pred = self.inference_2_nparray_by_filepath(filename, dic_cfg)
         r = []
         for obj in pred:
             x1, y1, x2, y2, conf, label_idx = obj

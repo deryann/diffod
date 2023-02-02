@@ -12,6 +12,8 @@ import requests
 from ObjectDetector import ObjectDetector
 
 
+DEFAULT_V7__WEB_API_PATH = "http://localhost:5000"
+
 class ObjectDetectorYoloV7(ObjectDetector):
     """
     Add a interface for object detector YOLOV5 (for inference).
@@ -22,24 +24,19 @@ class ObjectDetectorYoloV7(ObjectDetector):
 
         # self.model = load('ultralytics/yolov5', dic_cfg.get('model_name', 'yolov5s'), pretrained=True)
         # self.labels = self.model.names
-        self.conf_thres = 0.25
-        self.iou_thres = 0.45
         self.classes = None
-        print('conf_thres', self.conf_thres)
-        print('iou_thres', self.iou_thres)
-
-        
+        self.original_iou = 0.45
+        self.original_conf = 0.25
         self.labels = self.get_labels()
         self.lock = threading.Lock()
 
-        
         pass
 
     def clear_model(self):
         pass
 
     def get_labels(self):
-        url = 'http://localhost:5000/get_class'
+        url = DEFAULT_V7__WEB_API_PATH+'/get_class'
         try:
             response = requests.get(url)
             if response.ok:
@@ -52,14 +49,19 @@ class ObjectDetectorYoloV7(ObjectDetector):
             t = dict()
         return t.get('class', [])
 
-    def inference_2_nparray_by_filepath(self, filename: str):
-        url = 'http://localhost:5000/od_inference'
+    def inference_2_nparray_by_filepath(self, filename: str, dic_cfg=None):
+        url = DEFAULT_V7__WEB_API_PATH+'/od_inference'
+        if dic_cfg is not None:
+            _iou, _conf = dic_cfg.get('iou_thres', self.original_iou), dic_cfg.get('conf_thres', self.original_conf)
+
+        else:
+            _iou, _conf = self.original_iou, self.original_conf
 
         payload = {
-            "conf_thres": 0.25,
-            "iou_thres": 0.45,
+            "conf_thres": _conf,
+            "iou_thres": _iou,
             "model_name": self.model_name
-            }
+        }
 
         files = {
             'data': (None, json.dumps(payload), 'application/json'),

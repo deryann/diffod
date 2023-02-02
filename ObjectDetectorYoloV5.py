@@ -18,6 +18,8 @@ class ObjectDetectorYoloV5(ObjectDetector):
 
         self.model = load('ultralytics/yolov5', dic_cfg.get('model_name', 'yolov5s'), pretrained=True)
         self.labels = self.model.names
+        self.original_iou = self.model.iou
+        self.original_conf = self.model.conf
         pass
 
     def clear_model(self):
@@ -33,7 +35,14 @@ class ObjectDetectorYoloV5(ObjectDetector):
                 print(traceback.format_exc())
         pass
 
-    def inference_2_nparray_by_filepath(self, filename: str):
+    def inference_2_nparray_by_filepath(self, filename: str, dic_cfg=None):
+        if dic_cfg is not None:
+            self.model.iou = dic_cfg.get('iou_thres', self.original_iou)
+            self.model.conf = dic_cfg.get('conf_thres', self.original_conf)
+        else:
+            self.model.iou = self.original_iou
+            self.model.conf = self.original_conf
+
         image = Image.open(filename)
         image = image.convert("RGB")
         image = np.array(image)
