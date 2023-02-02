@@ -1,0 +1,12 @@
+version: '3'
+services:
+  serviceapp:
+    image: deryannhuang/diffod:0.0.1
+    ports:
+      - "8501:8501"
+    depends_on:
+      - serviceyolov7
+  serviceyolov7:
+    image: deryannhuang/yolov7fastapi:0.0.2
+    ports:
+      - "5000:5000"

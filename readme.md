@@ -17,6 +17,12 @@ docker run -it -p 127.0.0.1:8501:8501 diffod:latest
 docker run -it 
 ```
 
+### Use docker compose 
+to run app (include yolov5 and yolov8 interface) and yolov7
+```bash
+docker compose up
+```
+
 ## Contact
 For DiffOd bugs and feature requests please visit [GitHub Issues](https://github.com/deryann/diffod/issues).
 For professional support please [Contact Us](mailto:deryann@gmail.com).
