@@ -1,7 +1,7 @@
 """
 Main UI streamlit app
 """
-import os 
+import os
 import copy
 import sys
 from streamlit.web import cli as stcli
@@ -21,8 +21,8 @@ from image_utility import get_image_compare_result
 LIST_YOLOV5 = ["yolov5n", "yolov5s", "yolov5m", "yolov5l", "yolov5x"]
 LIST_YOLOV8 = ["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x"]
 
-#LIST_YOLOV7 = ["yolov7-tiny", "yolov7"]
-LIST_URL = [] 
+# LIST_YOLOV7 = ["yolov7-tiny", "yolov7"]
+LIST_URL = []
 OD_API_URL = os.environ.get('DIFFOD_URL', None)
 lst_extra_od = []
 if OD_API_URL is not None:
@@ -30,7 +30,7 @@ if OD_API_URL is not None:
     print(url_item)
     od_extra_api = ObjectDetectorFromRestAPI({'api_url': url_item})
     dic_models = od_extra_api.get_supported_models()
-    lst_extra_od = [item['model_name'] for item in dic_models.get('supported_models',[])]
+    lst_extra_od = [item['model_name'] for item in dic_models.get('supported_models', [])]
     pass
 
 ALL_MODELS = LIST_YOLOV5 + lst_extra_od + LIST_YOLOV8
@@ -51,7 +51,7 @@ def get_od_model(model_name: str):
     if model_name in SET_YOLOV8:
         return ObjectDetectorYoloV8({'model_name': model_name})
     if model_name in set_extra_od:
-        return ObjectDetectorFromRestAPI({'api_url': url_item,'model_name': model_name})
+        return ObjectDetectorFromRestAPI({'api_url': url_item, 'model_name': model_name})
 
 
 # initialize A B models
@@ -153,7 +153,7 @@ def main():
         dic_cfg_b = {"iou_thres": st.session_state['model_b_iou'], "conf_thres": st.session_state['model_b_conf']}
 
         lst_result_a = model_a.inference_as_json_by_filepath(_temp_name, dic_cfg=dic_cfg_a)
-        
+
         lst_result_b = model_b.inference_as_json_by_filepath(_temp_name, dic_cfg=dic_cfg_b)
         df_stat = get_df_stat(lst_result_a, lst_result_b)
 

@@ -17,6 +17,7 @@ class ObjectDetectorFromRestAPI(ObjectDetector):
     Add a interface for object detector RestAPI (for inference).
     You can imlement all function for your object detection model.
     """
+
     def load_model(self, dic_cfg={}):
         self.api_url = dic_cfg.get('api_url', None)
         self.model_name = dic_cfg.get('model_name', 'dummy')
