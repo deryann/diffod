@@ -1,6 +1,7 @@
 """
 Main UI streamlit app
 """
+import os 
 import copy
 import sys
 from streamlit.web import cli as stcli
@@ -11,8 +12,8 @@ from PIL import Image
 import pandas as pd
 
 from ObjectDetectorYoloV5 import ObjectDetectorYoloV5
-from ObjectDetectorYoloV7 import ObjectDetectorYoloV7
 from ObjectDetectorYoloV8 import ObjectDetectorYoloV8
+from ObjectDetectorFromRestAPI import ObjectDetectorFromRestAPI
 from compare_utility import *
 from image_utility import get_image_compare_result
 
@@ -20,26 +21,37 @@ from image_utility import get_image_compare_result
 LIST_YOLOV5 = ["yolov5n", "yolov5s", "yolov5m", "yolov5l", "yolov5x"]
 LIST_YOLOV8 = ["yolov8n", "yolov8s", "yolov8m", "yolov8l", "yolov8x"]
 
-LIST_YOLOV7 = ["yolov7-tiny", "yolov7"]
-ALL_MODELS = LIST_YOLOV5 + LIST_YOLOV7 + LIST_YOLOV8
+#LIST_YOLOV7 = ["yolov7-tiny", "yolov7"]
+LIST_URL = [] 
+OD_API_URL = os.environ.get('DIFFOD_URL', None)
+lst_extra_od = []
+if OD_API_URL is not None:
+    url_item = OD_API_URL
+    print(url_item)
+    od_extra_api = ObjectDetectorFromRestAPI({'api_url': url_item})
+    dic_models = od_extra_api.get_supported_models()
+    lst_extra_od = [item['model_name'] for item in dic_models.get('supported_models',[])]
+    pass
+
+ALL_MODELS = LIST_YOLOV5 + lst_extra_od + LIST_YOLOV8
 
 SET_YOLOV5 = set(LIST_YOLOV5)
 SET_YOLOV8 = set(LIST_YOLOV8)
-SET_YOLOV7 = set(LIST_YOLOV7)
+set_extra_od = set(lst_extra_od)
 
 # perset the models for 1at launch
 idx_model_a = ALL_MODELS.index("yolov5s")
-# idx_model_a = ALL_MODELS.index("yolov7-tiny")
 idx_model_b = ALL_MODELS.index("yolov8s")
 
 
 def get_od_model(model_name: str):
+    global od_extra_api
     if model_name in SET_YOLOV5:
         return ObjectDetectorYoloV5({'model_name': model_name})
     if model_name in SET_YOLOV8:
         return ObjectDetectorYoloV8({'model_name': model_name})
-    if model_name in SET_YOLOV7:
-        return ObjectDetectorYoloV7({'model_name': model_name})
+    if model_name in set_extra_od:
+        return ObjectDetectorFromRestAPI({'api_url': url_item,'model_name': model_name})
 
 
 # initialize A B models
@@ -141,6 +153,7 @@ def main():
         dic_cfg_b = {"iou_thres": st.session_state['model_b_iou'], "conf_thres": st.session_state['model_b_conf']}
 
         lst_result_a = model_a.inference_as_json_by_filepath(_temp_name, dic_cfg=dic_cfg_a)
+        
         lst_result_b = model_b.inference_as_json_by_filepath(_temp_name, dic_cfg=dic_cfg_b)
         df_stat = get_df_stat(lst_result_a, lst_result_b)
 
